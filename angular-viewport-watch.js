@@ -1,14 +1,7 @@
 "use strict";
 
 (function() {
-    function viewportWatch(scrollMonitor, $timeout) {
-        var viewportUpdateTimeout;
-        function debouncedViewportUpdate() {
-            $timeout.cancel(viewportUpdateTimeout);
-            viewportUpdateTimeout = $timeout(function() {
-                scrollMonitor.update();
-            }, 10);
-        }
+    function viewportWatch(scrollMonitor, ViewportWatchService) {
         return {
             restrict: "AE",
             link: function(scope, element, attr) {
@@ -59,7 +52,7 @@
                 }
                 if (!elementWatcher.isInViewport) {
                     scope.$evalAsync(disableDigest);
-                    debouncedViewportUpdate();
+                    ViewportWatchService.debouncedViewportUpdate();
                 }
                 elementWatcher.enterViewport(enableDigest);
                 elementWatcher.exitViewport(disableDigest);
@@ -68,11 +61,28 @@
                 });
                 scope.$on("$destroy", function() {
                     elementWatcher.destroy();
-                    debouncedViewportUpdate();
+                    ViewportWatchService.debouncedViewportUpdate();
                 });
             }
         };
     }
-    viewportWatch.$inject = [ "scrollMonitor", "$timeout" ];
-    angular.module("angularViewportWatch", []).directive("viewportWatch", viewportWatch).value("scrollMonitor", window.scrollMonitor);
+    viewportWatch.$inject = [ "scrollMonitor", "ViewportWatchService" ];
+
+    function ViewportWatchService(scrollMonitor, $timeout) {
+        var viewportUpdateTimeout;
+        return {
+            debouncedViewportUpdate: function () {
+                $timeout.cancel(viewportUpdateTimeout);
+                viewportUpdateTimeout = $timeout(function() {
+                    scrollMonitor.update();
+                }, 10);
+            }
+        }
+    }
+    ViewportWatchService.$inject = [ "scrollMonitor", "$timeout" ];
+
+    angular.module("angularViewportWatch", [])
+        .directive("viewportWatch", viewportWatch)
+        .service("ViewportWatchService", ViewportWatchService)
+        .value("scrollMonitor", window.scrollMonitor);
 })();
